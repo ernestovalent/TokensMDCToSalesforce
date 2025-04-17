@@ -11,15 +11,39 @@ let step = 0;
 const showVerbose = process.env.SHOW_VERBOSE === "true";
 
 function getYesterdayDate() {
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-    let day = yesterday.getDate();
-    let month = yesterday.getMonth() + 1;
-    let year = yesterday.getFullYear();
+    const now = new Date();
+    //Get date in Cancun timezone
+    const timeZone = 'America/Cancun';
+    const options = {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    };
+    const formatter = new Intl.DateTimeFormat([], options);
+    const parts = formatter.formatToParts(now);
+    let day, month, year;
+    parts.forEach(({ type, value }) => {
+        if (type === 'year') year = parseInt(value);
+        if (type === 'month') month = parseInt(value);
+        if (type === 'day') day = parseInt(value);
+      });
+    if( day === undefined || month === undefined || year === undefined){
+        console.error("Error getting date");
+        return;
+    }
+    //Convert to yesterday
+    const today = new Date(Date.UTC(year, month - 1, day));
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(today.getUTCDate() - 1);
+
+    day = yesterday.getUTCDate();
+    month = yesterday.getUTCMonth() + 1;
+    year = yesterday.getUTCFullYear();
+    //Format to dd/mm/yyyy
     const dateFormart = `${day < 10 ? "0" + day : day}/${month < 10 ? "0" + month : month
         }/${year}`;
-    printLog("Getting yesterday date", { date: dateFormart });
+    printLog("Getting yesterday date: " + dateFormart, { now: now.toISOString(), today: today.toISOString(), yesterday: yesterday.toISOString(), dateInFormat: dateFormart });
     return dateFormart;
 }
 
@@ -223,7 +247,7 @@ function printLog(title, details = {}){
     console.log(`${step}: ${title}`);
     if (showVerbose && Object.keys(details).length > 0) {
         for (const key in details) {
-            console.log(`  ${key}: ${details[key]}`);
+            console.log(` |- ${key}: ${details[key]}`);
         }
     }
 }
@@ -249,8 +273,9 @@ async function main() {
     await exportCSV(filteredTokens);
 }
 
-main().catch((error) => {
+/*main().catch((error) => {
     console.error("========> Fatal Error: ", error);
 }).finally(() => {
     console.log("\n=================================\n       * CSV file created! * \n=================================\n");
-});
+});*/
+getYesterdayDate();
